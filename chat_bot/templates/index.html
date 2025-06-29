@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chat Application</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .chat-message {
+            animation: fadeIn 0.3s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .typing-indicator {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 1; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <i class="fas fa-robot text-2xl text-blue-600 mr-2"></i>
+                    <h1 class="text-xl font-semibold text-gray-900">AI Chat Application</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button id="configBtn" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                    <button id="logoutBtn" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="flex h-screen pt-16">
+        <!-- Sidebar -->
+        <div class="w-80 bg-white shadow-sm border-r flex flex-col">
+            <!-- Chat Controls -->
+            <div class="p-4 border-b">
+                <button id="newChatBtn" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                    <i class="fas fa-plus mr-2"></i>New Chat
+                </button>
+            </div>
+
+            <!-- Chat Settings -->
+            <div class="p-4 border-b bg-gray-50">
+                <h3 class="font-semibold text-gray-700 mb-3">Chat Settings</h3>
+                
+                <!-- LLM Provider Selection -->
+                <div class="mb-3">
+                    <label class="block text-sm font-medium text-gray-600 mb-1">LLM Provider</label>
+                    <select id="providerSelect" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="">Select Provider</option>
+                    </select>
+                </div>
+
+                <!-- Model Selection -->
+                <div class="mb-3">
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Model</label>
+                    <select id="modelSelect" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="">Select Model</option>
+                    </select>
+                </div>
+
+                <!-- Temperature Control -->
+                <div class="mb-3">
+                    <label class="block text-sm font-medium text-gray-600 mb-1">
+                        Temperature: <span id="tempValue">0.7</span>
+                    </label>
+                    <input type="range" id="temperatureSlider" min="0" max="2" step="0.1" value="0.7" 
+                           class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                </div>
+
+                <!-- Max Tokens -->
+                <div class="mb-3">
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Max Tokens</label>
+                    <input type="number" id="maxTokens" value="1000" min="1" max="4000" 
+                           class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+            </div>
+
+            <!-- Chat History -->
+            <div class="flex-1 overflow-y-auto">
+                <div class="p-4">
+                    <h3 class="font-semibold text-gray-700 mb-3">Chat History</h3>
+                    <div id="chatHistory" class="space-y-2">
+                        <!-- Chat history items will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Area -->
+        <div class="flex-1 flex flex-col">
+            <!-- Chat Messages -->
+            <div id="chatMessages" class="flex-1 overflow-y-auto p-6 space-y-4">
+                <div class="text-center text-gray-500 mt-20">
+                    <i class="fas fa-comments text-4xl mb-4"></i>
+                    <p class="text-lg">Welcome to AI Chat!</p>
+                    <p class="text-sm">Select a provider and start a conversation.</p>
+                </div>
+            </div>
+
+            <!-- Message Input -->
+            <div class="border-t bg-white p-4">
+                <div class="flex space-x-3">
+                    <div class="flex-1">
+                        <textarea id="messageInput" 
+                                  placeholder="Type your message here..." 
+                                  class="w-full p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  rows="3"></textarea>
+                    </div>
+                    <button id="sendBtn" 
+                            class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
+                            disabled>
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-96">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Login</h2>
+            <form id="loginForm">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                    <input type="text" id="loginUsername" required
+                           class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                    <input type="password" id="loginPassword" required
+                           class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors">
+                    Login
+                </button>
+            </form>
+            <div class="mt-4 text-center">
+                <button id="showRegisterBtn" class="text-blue-600 hover:text-blue-800">
+                    Don't have an account? Register
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Register Modal -->
+    <div id="registerModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-96">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Register</h2>
+            <form id="registerForm">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                    <input type="text" id="registerUsername" required
+                           class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                    <input type="email" id="registerEmail" required
+                           class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                    <input type="text" id="registerFullName"
+                           class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                    <input type="password" id="registerPassword" required
+                           class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+                <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors">
+                    Register
+                </button>
+            </form>
+            <div class="mt-4 text-center">
+                <button id="showLoginBtn" class="text-blue-600 hover:text-blue-800">
+                    Already have an account? Login
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuration Modal -->
+    <div id="configModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-96 max-h-96 overflow-y-auto">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">LLM Configuration</h2>
+            <div id="configContent">
+                <!-- Configuration content will be loaded here -->
+                <h3 class="font-semibold text-gray-700 mb-2 mt-4">MCP Server & Tool Management</h3>
+                <div id="mcpServerToolConfig"></div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-3">
+                <button id="closeConfigBtn" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

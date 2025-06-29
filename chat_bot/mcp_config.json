@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "custom_server": {
+      "command": "node",
+      "args": [
+        "D:\\mcp_workspace\\custom\\custom_mcp.js"
+      ],
+      "env" : {
+        "APPDATA": "C:\\Users\\Chirag Jivani\\AppData\\Roaming"
+      }
+    },
+    "clickup_server": {
+      "command": "node",
+      "args": [
+        "D:\\mcp_workspace\\custom\\click-up_mcp_servers.js"
+      ]
+    }
+  }
+}
