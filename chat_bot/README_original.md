@@ -1,4 +1,7 @@
-# AI Chat Application
+# AI Chat Application with MCP Integration
+
+This is an AI based chatbot application.
+Here user can choose thier LLM model to chat and also configure MCP server and tools. 
 
 A comprehensive Python web application similar to Claude with multiple LLM provider support, built with FastAPI and modern web technologies.
 
